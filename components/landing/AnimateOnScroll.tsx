@@ -1,0 +1,29 @@
+"use client";
+import { useEffect } from "react";
+
+export default function AnimateOnScroll() {
+  useEffect(() => {
+    document.body.classList.add("js-ready");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("revealed");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
+    );
+
+    document.querySelectorAll("[data-animate]").forEach((el) => observer.observe(el));
+
+    return () => {
+      document.body.classList.remove("js-ready");
+      observer.disconnect();
+    };
+  }, []);
+
+  return null;
+}

@@ -15,10 +15,10 @@ const plans = [
       "Historique 7 jours",
       "Toutes les langues",
     ],
-    excluded: ["Crédits mensuels renouvelés", "Accès prioritaire", "Support dédié"],
+    excluded: ["Crédits mensuels renouvelés", "Accès prioritaire"],
     cta: "Commencer gratuitement",
-    href: "/auth/register",
-    variant: "ghost" as const,
+    href: "/auth/login",
+    highlight: false,
   },
   {
     name: "Starter",
@@ -35,10 +35,10 @@ const plans = [
       "Toutes les langues",
       "Ton personnalisable",
     ],
-    excluded: ["Accès prioritaire", "Support dédié"],
+    excluded: ["Accès prioritaire"],
     cta: "Choisir Starter",
     href: "/api/stripe/checkout?plan=starter",
-    variant: "ghost" as const,
+    highlight: false,
   },
   {
     name: "Pro",
@@ -60,23 +60,13 @@ const plans = [
     excluded: [],
     cta: "Choisir Pro",
     href: "/api/stripe/checkout?plan=pro",
-    variant: "gradient" as const,
+    highlight: true,
   },
 ];
 
-const pack = {
-  name: "Pack Crédits",
-  price: "9€",
-  credits: "15 crédits",
-  description: "Recharge ponctuelle sans abonnement",
-  note: "Les crédits s'ajoutent à votre solde, sans expiration",
-  cta: "Acheter le pack",
-  href: "/api/stripe/checkout?plan=pack",
-};
-
 function CheckIcon() {
   return (
-    <svg className="h-4 w-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 flex-shrink-0 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
     </svg>
   );
@@ -84,7 +74,7 @@ function CheckIcon() {
 
 function XIcon() {
   return (
-    <svg className="h-4 w-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 flex-shrink-0 text-white/10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
     </svg>
   );
@@ -92,86 +82,86 @@ function XIcon() {
 
 export default function Pricing() {
   return (
-    <section id="pricing" className="relative px-6 py-24 md:py-32">
-      <div className="pointer-events-none absolute top-0 left-1/2 h-px w-3/4 -translate-x-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    <section id="pricing" className="relative px-4 py-16 sm:px-6 sm:py-20 md:py-24">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-      {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute bottom-0 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/2 h-[350px] w-[600px] -translate-x-1/2 rounded-full bg-blue-600/8 blur-[120px]" />
       </div>
 
-      <div className="mx-auto max-w-6xl">
-        {/* Section header */}
-        <div className="mb-16 text-center">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-violet-400">
-            Tarifs
-          </p>
-          <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">
+      <div className="mx-auto max-w-5xl">
+        {/* Header */}
+        <div className="mb-12 text-center" data-animate>
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-violet-400">Tarifs</p>
+          <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">
             Un plan pour{" "}
             <span className="bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
               chaque créateur
             </span>
           </h2>
-          <p className="text-gray-400">
+          <p className="text-sm text-gray-500 sm:text-base">
             Sans engagement. Changez ou annulez à tout moment.
           </p>
         </div>
 
-        {/* Plans grid */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {plans.map((plan) => (
+        {/* Plans */}
+        <div className="grid gap-4 sm:gap-5 md:grid-cols-3">
+          {plans.map((plan, i) => (
             <div
               key={plan.name}
-              className={`relative flex flex-col rounded-2xl border p-8 transition-all ${
-                plan.variant === "gradient"
-                  ? "border-violet-500/50 bg-gradient-to-b from-violet-600/20 to-blue-600/10 shadow-xl shadow-violet-500/10"
-                  : "border-white/10 bg-white/5 hover:border-white/20"
+              className={`relative flex flex-col rounded-2xl border p-6 transition-colors ${
+                plan.highlight
+                  ? "border-violet-500/50 bg-gradient-to-b from-violet-600/15 to-transparent"
+                  : "border-white/10 bg-white/[0.03] hover:border-white/20"
               }`}
+              data-animate
+              style={{ transitionDelay: `${i * 80}ms` }}
             >
               {plan.badge && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-1 text-xs font-bold text-white shadow-lg">
+                  <span className="rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-1 text-xs font-bold text-white">
                     {plan.badge}
                   </span>
                 </div>
               )}
 
-              <div className="mb-6">
-                <h3 className="mb-1 text-lg font-bold text-white">{plan.name}</h3>
-                <p className="mb-4 text-sm text-gray-500">{plan.description}</p>
-                <div className="flex items-end gap-1">
-                  <span className="text-4xl font-bold text-white">{plan.price}</span>
-                  {plan.period && (
-                    <span className="mb-1 text-gray-500">{plan.period}</span>
-                  )}
+              {/* Plan info */}
+              <div className="mb-5">
+                <h3 className="mb-0.5 text-base font-bold text-white">{plan.name}</h3>
+                <p className="text-xs text-gray-500">{plan.description}</p>
+                <div className="mt-3 flex items-end gap-1">
+                  <span className="text-3xl font-bold text-white">{plan.price}</span>
+                  {plan.period && <span className="mb-0.5 text-sm text-gray-500">{plan.period}</span>}
                 </div>
-                <div className="mt-3 rounded-lg border border-violet-500/20 bg-violet-500/10 px-3 py-2">
-                  <p className="text-sm font-semibold text-violet-300">{plan.credits}</p>
-                  <p className="text-xs text-gray-500">{plan.creditsNote}</p>
+                <div className="mt-3 rounded-xl border border-violet-500/20 bg-violet-500/8 px-3 py-2">
+                  <p className="text-xs font-semibold text-violet-300">{plan.credits}</p>
+                  <p className="text-xs text-gray-600">{plan.creditsNote}</p>
                 </div>
               </div>
 
-              <ul className="mb-8 flex flex-col gap-3 flex-1">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2.5 text-sm text-gray-300">
+              {/* Features */}
+              <ul className="mb-6 flex flex-1 flex-col gap-2.5">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-center gap-2.5 text-sm text-gray-300">
                     <CheckIcon />
-                    {feature}
+                    {f}
                   </li>
                 ))}
-                {plan.excluded.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2.5 text-sm text-gray-600">
+                {plan.excluded.map((f) => (
+                  <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
                     <XIcon />
-                    {feature}
+                    {f}
                   </li>
                 ))}
               </ul>
 
+              {/* CTA */}
               <Link
                 href={plan.href}
-                className={`block w-full rounded-xl py-3.5 text-center text-sm font-semibold transition-all ${
-                  plan.variant === "gradient"
-                    ? "bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-105"
-                    : "border border-white/15 bg-white/8 text-white hover:bg-white/15"
+                className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all active:scale-[0.98] ${
+                  plan.highlight
+                    ? "bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02]"
+                    : "border border-white/15 bg-white/5 text-white hover:bg-white/10"
                 }`}
               >
                 {plan.cta}
@@ -180,31 +170,35 @@ export default function Pricing() {
           ))}
         </div>
 
-        {/* Pack crédits one-shot */}
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        {/* Credit pack */}
+        <div
+          className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"
+          data-animate
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600/30 to-blue-600/30 text-violet-300">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600/25 to-blue-600/25 text-violet-300">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-white">{pack.name}</h3>
-                  <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-0.5 text-sm font-semibold text-blue-300">
-                    {pack.credits} · {pack.price}
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-bold text-white">Pack Crédits</h3>
+                  <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+                    15 crédits · 9€
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-gray-400">{pack.description}</p>
-                <p className="mt-1 text-xs text-gray-600">{pack.note}</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Recharge ponctuelle, sans abonnement, sans expiration.
+                </p>
               </div>
             </div>
             <Link
-              href={pack.href}
-              className="flex-shrink-0 rounded-xl border border-white/15 bg-white/8 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-white/15 text-center"
+              href="/api/stripe/checkout?plan=pack"
+              className="flex-shrink-0 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-white/10 active:scale-[0.98]"
             >
-              {pack.cta}
+              Acheter — 9€
             </Link>
           </div>
         </div>
