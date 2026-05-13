@@ -1,0 +1,117 @@
+// Instagram Analytics — Prisma schema
+// SQLite par défaut (local). Pour Postgres en prod :
+//   - changer "sqlite" -> "postgresql"
+//   - mettre une URL Postgres dans DATABASE_URL
+//   - relancer `prisma migrate dev`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Compte Instagram suivi (1 seul en usage perso, mais le schéma supporte plusieurs)
+model Account {
+  id            String   @id @default(cuid())
+  igUserId      String   @unique
+  username      String
+  profilePicUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  snapshots AccountSnapshot[]
+  videos    Video[]
+}
+
+// Snapshot quotidien des stats globales du compte (pour les courbes historiques)
+model AccountSnapshot {
+  id             String   @id @default(cuid())
+  accountId      String
+  capturedAt     DateTime
+  followers      Int
+  following      Int
+  reach          Int
+  impressions    Int
+  profileViews   Int
+  engagementRate Float
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, capturedAt])
+  @@index([accountId, capturedAt])
+}
+
+// Une vidéo / un post (Reel, image, carousel, vidéo)
+model Video {
+  id           String   @id @default(cuid())
+  igMediaId    String   @unique
+  accountId    String
+  // "REEL" | "IMAGE" | "VIDEO" | "CAROUSEL" — SQLite n'a pas d'enum natif, on valide via Zod
+  type         String
+  caption      String?
+  permalink    String?
+  thumbnailUrl String?
+  postedAt     DateTime
+  durationSec  Int?
+  createdAt    DateTime @default(now())
+
+  account     Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  snapshots   VideoSnapshot[]
+  conversions Conversion[]
+
+  @@index([accountId, postedAt])
+}
+
+// Snapshot quotidien des stats d'une vidéo (courbes d'évolution)
+model VideoSnapshot {
+  id           String   @id @default(cuid())
+  videoId      String
+  capturedAt   DateTime
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  shares       Int      @default(0)
+  saves        Int      @default(0)
+  reach        Int      @default(0)
+  watchTimeSec Int      @default(0)
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, capturedAt])
+  @@index([videoId, capturedAt])
+}
+
+// Conversion Shorzy (clic / signup) attribuée à une vidéo Instagram
+model Conversion {
+  id         String   @id @default(cuid())
+  videoId    String?
+  // "click" | "signup"
+  kind       String
+  count      Int      @default(1)
+  occurredAt DateTime
+  // "manual" | "plausible" | "umami" | "shorzy" — extensible
+  source     String   @default("manual")
+  note       String?
+  createdAt  DateTime @default(now())
+
+  video Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([videoId, occurredAt])
+  @@index([occurredAt])
+}
+
+// Trace de chaque sync (manuel ou cron)
+model SyncRun {
+  id         String    @id @default(cuid())
+  // "mock" | "ig"
+  source     String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  // "running" | "success" | "error"
+  status     String
+  errorMsg   String?
+  notes      String?
+}
