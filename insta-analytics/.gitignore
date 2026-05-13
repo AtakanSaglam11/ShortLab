@@ -1,0 +1,28 @@
+# deps
+node_modules
+.pnp
+.pnp.*
+
+# next
+.next
+out
+
+# env
+.env
+.env.local
+.env.*.local
+
+# prisma
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+prisma/*.db-journal
+prisma/.schema.sqlite.bak.prisma
+
+# misc
+.DS_Store
+*.log
+.next-env.d.ts
+next-env.d.ts
+.turbo
+coverage
