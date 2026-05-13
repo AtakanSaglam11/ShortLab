@@ -1,95 +1,144 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
-import { formatNumber } from "@/lib/format";
+import {
+  parsePeriod,
+  PERIOD_LABELS,
+  type PeriodKind,
+} from "@/lib/analytics/periods";
+import {
+  getAccountKpis,
+  getAccountTimeseries,
+  getVideosWithLatestStats,
+} from "@/lib/analytics/trends";
+import { computeAlerts } from "@/lib/analytics/alerts";
+import { TopBar } from "@/components/layout/TopBar";
+import { DateRangeFilter } from "@/components/filters/DateRangeFilter";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
+import { KpiCard } from "@/components/dashboard/KpiCard";
+import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { RecentVideosTable } from "@/components/dashboard/RecentVideosTable";
+import { EngagementChart } from "@/components/charts/EngagementChart";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const [account, videoCount, snapshotCount, lastSync] = await Promise.all([
-    prisma.account.findFirst(),
-    prisma.video.count(),
-    prisma.accountSnapshot.count(),
-    prisma.syncRun.findFirst({ orderBy: { startedAt: "desc" } }),
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
+}) {
+  const params = await searchParams;
+  const period = parsePeriod(params.period, params.from, params.to);
+
+  const account = await prisma.account.findFirst();
+  if (!account) return <EmptyState />;
+
+  const [kpis, timeseries, videos, alerts] = await Promise.all([
+    getAccountKpis(account.id, period),
+    getAccountTimeseries(account.id, period),
+    getVideosWithLatestStats(account.id, period),
+    computeAlerts(account.id),
   ]);
 
+  // Limiter la table aux 10 dernières vidéos
+  const recent = videos.slice(0, 10);
+
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Instagram Analytics
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Bootstrap OK — le dashboard arrive
-        </h1>
-        <p className="text-muted-foreground">
-          Fondation prête (Next.js + Prisma + provider mock/IG). L&apos;UI complète
-          (dashboard, vidéos, insights, Shorzy) suit dans la prochaine étape.
-        </p>
-      </div>
+    <>
+      <TopBar
+        title={`@${account.username}`}
+        subtitle={`${PERIOD_LABELS[period.kind]} · ${formatDate(period.from)} → ${formatDate(period.to)}`}
+        right={
+          <>
+            <DateRangeFilter current={period.kind as PeriodKind} />
+            <RefreshButton />
+          </>
+        }
+      />
 
-      <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Stat label="Source" value={env.DATA_SOURCE.toUpperCase()} />
-        <Stat
-          label="Compte"
-          value={account?.username ?? "—"}
-          hint={account ? `@${account.username}` : "Lance le seed"}
-        />
-        <Stat label="Vidéos" value={formatNumber(videoCount)} />
-        <Stat label="Snapshots" value={formatNumber(snapshotCount)} />
-      </div>
+      <main className="space-y-6 p-6">
+        <AlertsPanel alerts={alerts} />
 
-      <div className="mt-10 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-medium">Dernière synchro</h2>
-        {lastSync ? (
-          <div className="mt-2 text-sm text-muted-foreground">
-            <span className="capitalize">{lastSync.status}</span> · source{" "}
-            {lastSync.source} ·{" "}
-            {new Date(lastSync.startedAt).toLocaleString("fr-FR")}
-            {lastSync.notes && (
-              <span className="block text-xs">{lastSync.notes}</span>
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <KpiCard label="Followers" metric={kpis.followers} />
+          <KpiCard label="Reach" metric={kpis.reach} />
+          <KpiCard label="Impressions" metric={kpis.impressions} />
+          <KpiCard
+            label="Engagement"
+            metric={kpis.engagementRate}
+            format="percent"
+          />
+          <KpiCard label="Profile views" metric={kpis.profileViews} />
+        </section>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between gap-4">
+            <CardTitle className="text-sm font-medium text-foreground">
+              Reach &amp; Impressions
+            </CardTitle>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <LegendDot color="#a855f7" label="Reach" />
+              <LegendDot color="#3b82f6" label="Impressions" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <EngagementChart data={timeseries} />
+          </CardContent>
+        </Card>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium">
+              Vidéos publiées sur la période ({videos.length})
+            </h2>
+            {videos.length > recent.length && (
+              <a
+                href="/videos"
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Voir toutes les vidéos →
+              </a>
             )}
           </div>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Aucune synchro pour l&apos;instant. Lance{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">
-              npm run db:seed
-            </code>
-            .
-          </p>
-        )}
-      </div>
-
-      <div className="mt-8 space-y-2 text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">Étapes restantes :</p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>UI : shadcn, layout sidebar, KPI cards, dashboard</li>
-          <li>Pages vidéos (table triable + détail courbes)</li>
-          <li>Insights (analyse honnête, patterns, alertes)</li>
-          <li>Section Shorzy (conversions manuelles + corrélation)</li>
-          <li>API sync (manuel + cron)</li>
-        </ul>
-      </div>
-    </main>
+          <RecentVideosTable videos={recent} />
+        </section>
+      </main>
+    </>
   );
 }
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
-    </div>
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className="h-2 w-2 rounded-full"
+        style={{ background: color }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function EmptyState() {
+  return (
+    <main className="mx-auto max-w-xl p-10">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-foreground">
+            Aucune donnée
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Lance le seed pour générer 6 mois de données mock :
+          </p>
+          <pre className="mt-3 rounded bg-muted p-3 text-xs">
+            npm run db:seed
+          </pre>
+        </CardContent>
+      </Card>
+    </main>
   );
 }

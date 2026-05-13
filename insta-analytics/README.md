@@ -132,15 +132,93 @@ insta-analytics/
 └── middleware.ts            Basic-auth stub (prod uniquement)
 ```
 
-## Déploiement
+## Déploiement Vercel — pas-à-pas
 
-### Vercel (le plus simple)
-1. Crée un projet Vercel pointant sur ce dossier (`root: insta-analytics`).
-2. Provisionne un Postgres (Vercel Postgres / Neon / Supabase).
-3. Dans `prisma/schema.prisma`, change `provider = "postgresql"`.
-4. Variables Vercel : `DATABASE_URL`, `DATA_SOURCE=ig`, `IG_ACCESS_TOKEN`,
-   `IG_USER_ID`, `CRON_SECRET`, `AUTH_PASSWORD`, `NEXT_PUBLIC_APP_URL`.
-5. Add un Vercel Cron sur `/api/cron/daily` (header `Authorization: Bearer $CRON_SECRET`).
+Le repo héberge **deux apps indépendantes** (Shorzy à la racine, Insta Analytics
+dans `insta-analytics/`). Vercel ne peut builder qu'un seul dossier par projet,
+donc Insta Analytics nécessite **son propre projet Vercel**, distinct de celui
+de Shorzy.
+
+### 1. Provisionner un Postgres
+
+SQLite est parfait en local mais ne marche pas sur Vercel (filesystem en
+lecture seule sur serverless). Choisis :
+
+- **Neon** (https://neon.tech) — généreux free tier, mon préféré
+- **Vercel Postgres** — intégration native
+- **Supabase** — si tu veux aussi le pgvector / auth plus tard
+
+Récupère l'URL `postgresql://...` que tu mettras dans `DATABASE_URL`.
+
+### 2. Basculer le schema Prisma vers Postgres
+
+Avant le premier deploy, édite `insta-analytics/prisma/schema.prisma` :
+
+```diff
+ datasource db {
+-  provider = "sqlite"
++  provider = "postgresql"
+   url      = env("DATABASE_URL")
+ }
+```
+
+Puis localement, crée une migration propre pour Postgres :
+
+```bash
+DATABASE_URL="postgresql://..." npx prisma migrate dev --name init-pg
+git add prisma/migrations && git commit -m "feat: postgres migration"
+```
+
+### 3. Créer le projet Vercel
+
+1. Vercel dashboard → **Add New** → **Project**
+2. Import le repo `AtakanSaglam11/ShortLab`
+3. **Configure Project** — étape clef :
+   - **Project Name** : `insta-analytics` (ou ce que tu veux)
+   - **Framework Preset** : Next.js (auto-détecté)
+   - **Root Directory** : `insta-analytics` ← clique **Edit** et tape ce chemin
+   - **Build Command** : laisser par défaut (le `vercel.json` du dossier
+     contient déjà le bon)
+4. **Environment Variables** :
+
+   | Nom                   | Valeur                                       |
+   | --------------------- | -------------------------------------------- |
+   | `DATABASE_URL`        | URL Postgres de Neon/Vercel Postgres         |
+   | `DATA_SOURCE`         | `ig` (ou `mock` pour tester)                 |
+   | `IG_ACCESS_TOKEN`     | ton token long-lived                         |
+   | `IG_USER_ID`          | ton IG user id                               |
+   | `CRON_SECRET`         | string aléatoire 32+ chars                   |
+   | `AUTH_PASSWORD`       | mot de passe basic-auth (sinon site public)  |
+   | `NEXT_PUBLIC_APP_URL` | URL Vercel ou ton domaine                    |
+
+5. **Deploy**.
+
+### 4. Cron automatique
+
+Le `vercel.json` du dossier déclare déjà un cron quotidien sur
+`/api/cron/daily` à 3h du matin. Vercel l'active automatiquement après le
+premier deploy (plan Pro requis pour les crons).
+
+La route vérifie `Authorization: Bearer $CRON_SECRET` — Vercel injecte
+automatiquement le header pour les crons internes.
+
+### 5. (Optionnel) Empêcher Shorzy de rebuild à chaque push analytics
+
+Sur le **projet Vercel `short-lab`** (Shorzy), va dans
+**Settings → Git → Ignored Build Step** et colle :
+
+```bash
+git diff --quiet HEAD^ HEAD -- ':!insta-analytics/'
+```
+
+Cela skip le build Shorzy quand seul `insta-analytics/` a changé.
+
+### Déploiement VPS / Docker
+
+- Postgres + Node 20+ + pm2 ou systemd
+- `prisma migrate deploy` à chaque release
+- Reverse-proxy nginx, `cron` qui appelle `/api/cron/daily` avec
+  `Authorization: Bearer $CRON_SECRET`.
 
 ### VPS / Docker
 - Postgres + Node 20+ + pm2 ou systemd.
