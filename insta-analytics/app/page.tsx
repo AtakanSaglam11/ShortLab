@@ -17,6 +17,7 @@ import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { RecentVideosTable } from "@/components/dashboard/RecentVideosTable";
+import { SeedButton } from "@/components/dashboard/SeedButton";
 import { EngagementChart } from "@/components/charts/EngagementChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
@@ -127,16 +128,19 @@ function EmptyState() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base text-foreground">
-            Aucune donnée
+            Base vide — démarrons
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Lance le seed pour générer 6 mois de données mock :
+            Aucun compte n&apos;est encore en base. Clique ci-dessous pour
+            générer 6 mois de données factices réalistes, ou lance{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              npm run db:seed
+            </code>{" "}
+            en local.
           </p>
-          <pre className="mt-3 rounded bg-muted p-3 text-xs">
-            npm run db:seed
-          </pre>
+          <SeedButton />
         </CardContent>
       </Card>
     </main>

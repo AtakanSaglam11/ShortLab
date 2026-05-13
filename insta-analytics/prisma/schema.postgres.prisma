@@ -1,0 +1,104 @@
+// Variante Postgres du schema (utilisée automatiquement par scripts/use-db.mjs
+// quand DATABASE_URL commence par postgres:// ou postgresql://).
+// Identique à schema.prisma sauf le provider.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id            String   @id @default(cuid())
+  igUserId      String   @unique
+  username      String
+  profilePicUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  snapshots AccountSnapshot[]
+  videos    Video[]
+}
+
+model AccountSnapshot {
+  id             String   @id @default(cuid())
+  accountId      String
+  capturedAt     DateTime
+  followers      Int
+  following      Int
+  reach          Int
+  impressions    Int
+  profileViews   Int
+  engagementRate Float
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, capturedAt])
+  @@index([accountId, capturedAt])
+}
+
+model Video {
+  id           String   @id @default(cuid())
+  igMediaId    String   @unique
+  accountId    String
+  type         String
+  caption      String?
+  permalink    String?
+  thumbnailUrl String?
+  postedAt     DateTime
+  durationSec  Int?
+  createdAt    DateTime @default(now())
+
+  account     Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  snapshots   VideoSnapshot[]
+  conversions Conversion[]
+
+  @@index([accountId, postedAt])
+}
+
+model VideoSnapshot {
+  id           String   @id @default(cuid())
+  videoId      String
+  capturedAt   DateTime
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  shares       Int      @default(0)
+  saves        Int      @default(0)
+  reach        Int      @default(0)
+  watchTimeSec Int      @default(0)
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, capturedAt])
+  @@index([videoId, capturedAt])
+}
+
+model Conversion {
+  id         String   @id @default(cuid())
+  videoId    String?
+  kind       String
+  count      Int      @default(1)
+  occurredAt DateTime
+  source     String   @default("manual")
+  note       String?
+  createdAt  DateTime @default(now())
+
+  video Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([videoId, occurredAt])
+  @@index([occurredAt])
+}
+
+model SyncRun {
+  id         String    @id @default(cuid())
+  source     String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     String
+  errorMsg   String?
+  notes      String?
+}

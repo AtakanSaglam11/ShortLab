@@ -150,24 +150,15 @@ lecture seule sur serverless). Choisis :
 
 Récupère l'URL `postgresql://...` que tu mettras dans `DATABASE_URL`.
 
-### 2. Basculer le schema Prisma vers Postgres
+### 2. Le swap SQLite ↔ Postgres est automatique
 
-Avant le premier deploy, édite `insta-analytics/prisma/schema.prisma` :
+Rien à éditer côté code. Le script `scripts/use-db.mjs` (lancé en
+`postinstall` et avant chaque `build`) détecte `DATABASE_URL` :
+- URL `postgres://...` → utilise `prisma/schema.postgres.prisma`
+- Sinon → garde `prisma/schema.prisma` (SQLite)
 
-```diff
- datasource db {
--  provider = "sqlite"
-+  provider = "postgresql"
-   url      = env("DATABASE_URL")
- }
-```
-
-Puis localement, crée une migration propre pour Postgres :
-
-```bash
-DATABASE_URL="postgresql://..." npx prisma migrate dev --name init-pg
-git add prisma/migrations && git commit -m "feat: postgres migration"
-```
+Le build sur Vercel fait également un `prisma db push` pour synchroniser
+le schéma sur Postgres au premier deploy (idempotent ensuite).
 
 ### 3. Créer le projet Vercel
 
@@ -193,7 +184,18 @@ git add prisma/migrations && git commit -m "feat: postgres migration"
 
 5. **Deploy**.
 
-### 4. Cron automatique
+### 4. Premier accès — populer la base
+
+Une fois le deploy terminé, ouvre l'URL. Comme la base Postgres est
+vide, tu verras un écran "Base vide — démarrons" avec un bouton
+**"Générer 6 mois de données mock"**. Clique. Tu auras instantanément
+1 compte, 50 vidéos, 180 jours d'historique et 16 conversions Shorzy
+de seed pour tester le dashboard.
+
+Quand tu passeras en `DATA_SOURCE=ig` avec ton vrai token, utilise
+le bouton **Refresh** dans le dashboard pour pull les vraies données.
+
+### 5. Cron automatique
 
 Le `vercel.json` du dossier déclare déjà un cron quotidien sur
 `/api/cron/daily` à 3h du matin. Vercel l'active automatiquement après le
@@ -202,7 +204,7 @@ premier deploy (plan Pro requis pour les crons).
 La route vérifie `Authorization: Bearer $CRON_SECRET` — Vercel injecte
 automatiquement le header pour les crons internes.
 
-### 5. (Optionnel) Empêcher Shorzy de rebuild à chaque push analytics
+### 6. (Optionnel) Empêcher Shorzy de rebuild à chaque push analytics
 
 Sur le **projet Vercel `short-lab`** (Shorzy), va dans
 **Settings → Git → Ignored Build Step** et colle :

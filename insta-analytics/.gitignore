@@ -17,6 +17,7 @@ prisma/dev.db
 prisma/dev.db-journal
 prisma/*.db
 prisma/*.db-journal
+prisma/.schema.sqlite.bak.prisma
 
 # misc
 .DS_Store
